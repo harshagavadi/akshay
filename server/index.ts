@@ -1,7 +1,5 @@
 import express from "express";
 import cors from "cors";
-import ytdl from "@distube/ytdl-core";
-import ffmpeg from "fluent-ffmpeg";
 import { PassThrough } from "stream";
 import { spawn } from "child_process";
 import { createReadStream } from "fs";
@@ -474,6 +472,7 @@ app.post("/api/video-info", async (req, res) => {
     const isServerless = !!(process.env.NETLIFY || process.env.VERCEL);
 
     if (!isServerless) try {
+      const ytdl = (await import("@distube/ytdl-core")).default;
       const info = await ytdl.getInfo(clean);
       const details = info.videoDetails;
 
@@ -631,6 +630,8 @@ app.post("/api/download", async (req, res) => {
   if (source === "youtube-ytdl" && format === "mp3" && itag) {
     res.setHeader("Content-Disposition", `attachment; filename="${safe}.mp3"`);
     res.setHeader("Content-Type", "audio/mpeg");
+    const ytdl = (await import("@distube/ytdl-core")).default;
+    const ffmpeg = (await import("fluent-ffmpeg")).default;
     const audioStream = ytdl(url, { quality: itag });
     const pass = new PassThrough();
     ffmpeg(audioStream)
@@ -650,6 +651,8 @@ app.post("/api/download", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${safe}.mp4"`);
     res.setHeader("Content-Type", "video/mp4");
     try {
+      const ytdl = (await import("@distube/ytdl-core")).default;
+      const ffmpeg = (await import("fluent-ffmpeg")).default;
       const videoStream = ytdl(url, { quality: itag });
       const audioStream = ytdl(url, { quality: audioItag ?? "highestaudio" });
       const pass = new PassThrough();
