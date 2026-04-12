@@ -1,0 +1,58 @@
+18:40:03.739 Running build in Washington, D.C., USA (East) – iad1
+18:40:03.740 Build machine configuration: 2 cores, 8 GB
+18:40:07.058 Cloning github.com/harshagavadi/akshay (Branch: main, Commit: 97e6839)
+18:40:08.261 Cloning completed: 1.203s
+18:40:08.415 Restored build cache from previous deployment (FCCrxwV72FED3kseJE1e7nL3iBBK)
+18:40:09.514 Running "vercel build"
+18:40:11.758 Vercel CLI 50.42.0
+18:40:12.451 Running "install" command: `npm install`...
+18:40:15.730 
+18:40:15.730 up to date, audited 636 packages in 3s
+18:40:15.731 
+18:40:15.731 130 packages are looking for funding
+18:40:15.731   run `npm fund` for details
+18:40:15.760 
+18:40:15.761 16 vulnerabilities (3 low, 7 moderate, 6 high)
+18:40:15.761 
+18:40:15.761 To address issues that do not require attention, run:
+18:40:15.762   npm audit fix
+18:40:15.762 
+18:40:15.762 To address all issues (including breaking changes), run:
+18:40:15.762   npm audit fix --force
+18:40:15.763 
+18:40:15.763 Run `npm audit` for details.
+18:40:15.983 
+18:40:15.984 > vite_react_shadcn_ts@0.0.0 build
+18:40:15.984 > vite build
+18:40:15.984 
+18:40:16.243 [36mvite v5.4.21 [32mbuilding for production...[36m[39m
+18:40:16.304 transforming...
+18:40:21.257 [32m✓[39m 2107 modules transformed.
+18:40:21.841 rendering chunks...
+18:40:21.854 computing gzip size...
+18:40:21.881 [2mdist/[22m[32mindex.html                 [39m[1m[2m  5.98 kB[22m[1m[22m[2m │ gzip:   1.76 kB[22m
+18:40:21.881 [2mdist/[22m[2massets/[22m[35mindex-YQDaEn-x.css  [39m[1m[2m 88.64 kB[22m[1m[22m[2m │ gzip:  15.31 kB[22m
+18:40:21.882 [2mdist/[22m[2massets/[22m[36mindex-C8ExVTrm.js   [39m[1m[33m756.39 kB[39m[22m[2m │ gzip: 238.04 kB[22m
+18:40:21.882 [33m
+18:40:21.883 (!) Some chunks are larger than 500 kB after minification. Consider:
+18:40:21.883 - Using dynamic import() to code-split the application
+18:40:21.883 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+18:40:21.883 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+18:40:21.884 [32m✓ built in 5.62s[39m
+18:40:21.963 Installing dependencies...
+18:40:26.399 
+18:40:26.399 up to date in 4s
+18:40:26.400 
+18:40:26.400 130 packages are looking for funding
+18:40:26.400   run `npm fund` for details
+18:40:26.739 Using TypeScript 5.9.3 (local user-provided)
+18:40:28.741 api/index.ts(2,17): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../server/index.js'?
+18:40:28.741 
+18:40:31.428 Build Completed in /vercel/output [19s]
+18:40:31.535 Deploying outputs...
+18:40:32.030 Warning: Provided `memory` setting in `vercel.json` is ignored on Active CPU billing. You can safely remove this setting from your configuration. Learn more: https://vercel.com/docs/fluid-compute/pricing
+18:40:36.506 Deployment completed
+18:40:37.535 Creating build cache...
+18:41:01.307 Created build cache: 24s
+18:41:01.307 Uploading build cache [124.48 MB]
+18:41:03.155 Build cache uploaded: 1.850s
