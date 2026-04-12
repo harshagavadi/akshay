@@ -13,7 +13,6 @@ try { __dirname = path.dirname(fileURLToPath(import.meta.url)); } catch {}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const IS_PRODUCTION = process.env.NODE_ENV === "production" && !process.env.NETLIFY && !process.env.VERCEL && !process.env.REPL_ID;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "";
 app.use(cors({
@@ -726,14 +725,6 @@ app.post("/api/download", async (req, res) => {
 });
 
 export default app;
-
-if (IS_PRODUCTION) {
-  const distPath = path.join(__dirname, "../dist");
-  app.use(express.static(distPath));
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
