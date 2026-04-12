@@ -338,18 +338,28 @@ async function downloadWithYtDlp(options: {
 // ── RapidAPI helper (used for non-YouTube AND as YouTube fallback) ────────────
 async function fetchViaRapidAPI(url: string) {
   if (!RAPIDAPI_KEY) throw new Error("Video download API is not configured. Add RAPIDAPI_KEY to enable this platform.");
-  const res = await fetch("https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-rapidapi-key": RAPIDAPI_KEY,
-      "x-rapidapi-host": "social-download-all-in-one.p.rapidapi.com",
-    },
-    body: JSON.stringify({ url }),
-  });
-  const data = await res.json() as any;
-  if (!res.ok) throw new Error(data?.message || "RapidAPI error");
-  return data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch("https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": "social-download-all-in-one.p.rapidapi.com",
+      },
+      body: JSON.stringify({ url }),
+      signal: controller.signal,
+    });
+    const data = await res.json() as any;
+    if (!res.ok) throw new Error(data?.message || "RapidAPI error");
+    return data;
+  } catch (err: any) {
+    if (err.name === "AbortError") throw new Error("RapidAPI request timed out. Please try again.");
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildRapidAPIFormats(data: any, pageUrl: string) {
@@ -413,9 +423,18 @@ async function fetchSourceFile(downloadUrl: string) {
 
   let lastStatus = 0;
   for (const headers of headerAttempts) {
-    const response = await fetch(downloadUrl, { headers, redirect: "follow" });
-    lastStatus = response.status;
-    if (response.ok) return response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(downloadUrl, { headers, redirect: "follow", signal: controller.signal });
+      lastStatus = response.status;
+      if (response.ok) return response;
+    } catch (err: any) {
+      if (err.name === "AbortError") throw new Error("Download request timed out. Please try again.");
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   throw new Error(`Source responded with ${lastStatus || "an error"}`);
