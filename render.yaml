@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: snapclipper
+    runtime: node
+    buildCommand: ./build.sh
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RAPIDAPI_KEY
+        sync: false

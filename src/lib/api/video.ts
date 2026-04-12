@@ -1,0 +1,112 @@
+export interface VideoFormat {
+  quality: string;
+  format: string;
+  size?: string | null;
+  url: string;
+  audioUrl?: string | null;
+  hasAudio: boolean;
+  videoOnly?: boolean;
+  itag?: number | null;
+  audioItag?: number | null;
+  source?: string;
+  pageUrl?: string;
+}
+
+export interface VideoInfo {
+  title: string;
+  thumbnail: string;
+  duration: string;
+  formats: VideoFormat[];
+  source?: string;
+}
+
+export function parseVideoUrls(input: string) {
+  return Array.from(
+    new Set(
+      input
+        .split(/[\n,]+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+async function readApiError(response: Response, fallback: string) {
+  const text = await response.text();
+  if (!text) return fallback;
+
+  try {
+    const error = JSON.parse(text);
+    return error?.error || error?.message || fallback;
+  } catch {
+    return text.slice(0, 200) || fallback;
+  }
+}
+
+export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
+  const response = await fetch("/api/video-info", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, `Request failed (${response.status})`));
+  }
+
+  const data = await response.json();
+
+  if (!data?.success) {
+    throw new Error(data?.error || "Could not process this URL");
+  }
+
+  const info = data.data as VideoInfo;
+  if (info.source) {
+    info.formats = info.formats.map((f) => ({ ...f, source: info.source }));
+  }
+  return info;
+}
+
+export function startBrowserDownload(format: VideoFormat, title: string) {
+  const frameName = `download-frame-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const iframe = document.createElement("iframe");
+  iframe.name = frameName;
+  iframe.style.display = "none";
+  document.body.appendChild(iframe);
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/download";
+  form.target = frameName;
+  form.style.display = "none";
+
+  const fields: Record<string, string> = {
+    url: format.url,
+    format: format.format,
+    title,
+    quality: format.quality,
+  };
+
+  if (format.itag !== null && format.itag !== undefined) fields.itag = String(format.itag);
+  if (format.audioItag !== null && format.audioItag !== undefined) fields.audioItag = String(format.audioItag);
+  if (format.source) fields.source = format.source;
+  if (format.pageUrl) fields.pageUrl = format.pageUrl;
+
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+
+  window.setTimeout(() => {
+    iframe.remove();
+  }, 30000);
+}
