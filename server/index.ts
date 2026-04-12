@@ -494,7 +494,7 @@ app.post("/api/video-info", async (req, res) => {
     const clean = cacheKey;
     let usedYtdl = false;
     let youtubeErrorMessage = "Could not process this YouTube URL. Please try a different public video link.";
-    const isServerless = !!(process.env.NETLIFY || process.env.VERCEL);
+    const isServerless = !!(process.env.NETLIFY || process.env.VERCEL || process.env.RENDER);
 
     if (!isServerless) try {
       const ytdl = (await import("@distube/ytdl-core")).default;
@@ -617,7 +617,7 @@ app.post("/api/download", async (req, res) => {
 
   const safe = (title || "video").replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "video";
 
-  const isServerlessDl = !!(process.env.NETLIFY || process.env.VERCEL);
+  const isServerlessDl = !!(process.env.NETLIFY || process.env.VERCEL || process.env.RENDER);
   let ytDlpFailed = false;
   if (!isServerlessDl && pageUrl && isYouTube(pageUrl)) {
     try {
