@@ -15,7 +15,7 @@ try { __dirname = path.dirname(fileURLToPath(import.meta.url)); } catch {}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const IS_PRODUCTION = process.env.NODE_ENV === "production" && !process.env.NETLIFY && !process.env.VERCEL;
+const IS_PRODUCTION = process.env.NODE_ENV === "production" && !process.env.NETLIFY && !process.env.VERCEL && !process.env.REPL_ID;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -554,7 +554,7 @@ app.post("/api/video-info", async (req, res) => {
       });
     } catch (rapidErr) {
       console.error("RapidAPI YouTube fallback also failed:", rapidErr.message);
-      } catch (rapidErr) { block
+      return res.status(500).json({ success: false, error: youtubeErrorMessage });
     }
   }
 
