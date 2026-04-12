@@ -10,11 +10,12 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let __dirname = process.cwd();
+try { __dirname = path.dirname(fileURLToPath(import.meta.url)); } catch {}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const IS_PRODUCTION = process.env.NODE_ENV === "production" && !process.env.NETLIFY && !process.env.VERCEL;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
