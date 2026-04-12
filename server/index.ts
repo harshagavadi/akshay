@@ -553,7 +553,7 @@ app.post("/api/video-info", async (req, res) => {
       });
     } catch (rapidErr: any) {
       console.error("RapidAPI YouTube fallback also failed:", rapidErr.message);
-      return res.status(500).json({ success: false, error: youtubeErrorMessage });
+      } catch (rapidErr: any) { block
     }
   }
 
