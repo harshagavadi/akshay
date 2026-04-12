@@ -299,7 +299,7 @@ async function downloadWithYtDlp(options: {
         await runYtDlp([...baseArgs, "-f", selector, "--merge-output-format", targetFormat, pageUrl]);
         lastError = null;
         break;
-      } catch (err: any) {
+      } catch (err) {
         lastError = err;
       }
     }
@@ -528,7 +528,7 @@ app.post("/api/video-info", async (req, res) => {
         formats,
         source: "youtube-ytdl",
       });
-    } catch (ytdlErr: any) {
+    } catch (ytdlErr) {
       youtubeErrorMessage = getYouTubeUserMessage(ytdlErr);
       console.warn("ytdl-core failed, falling back to yt-dlp:", ytdlErr.message);
     }
@@ -536,7 +536,7 @@ app.post("/api/video-info", async (req, res) => {
     if (!isServerless) try {
       const data = await fetchYouTubeViaYtDlp(clean);
       return sendCachedVideoInfo(res, cacheKey, data);
-    } catch (ytDlpErr: any) {
+    } catch (ytDlpErr) {
       youtubeErrorMessage = getYouTubeUserMessage(ytDlpErr);
       console.warn("yt-dlp metadata fallback failed, falling back to RapidAPI:", ytDlpErr.message);
     }
@@ -552,9 +552,9 @@ app.post("/api/video-info", async (req, res) => {
         formats: formats.map((f) => ({ ...f, source: "youtube-rapid" })),
         source: "youtube-rapid",
       });
-    } catch (rapidErr: any) {
+    } catch (rapidErr) {
       console.error("RapidAPI YouTube fallback also failed:", rapidErr.message);
-      } catch (rapidErr: any) { block
+      } catch (rapidErr) { block
     }
   }
 
@@ -569,7 +569,7 @@ app.post("/api/video-info", async (req, res) => {
       formats: formats.map((f) => ({ ...f, source: "other" })),
       source: "other",
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("video-info error:", err.message);
     return res.status(500).json({ success: false, error: err.message || "Failed to process URL" });
   }
@@ -599,7 +599,7 @@ app.post("/api/download", async (req, res) => {
     try {
       await downloadWithYtDlp({ pageUrl, format, quality, title, res });
       return;
-    } catch (err: any) {
+    } catch (err) {
       console.warn("yt-dlp download failed, trying RapidAPI fallback:", err.message);
       if (res.headersSent) return;
       ytDlpFailed = true;
@@ -620,7 +620,7 @@ app.post("/api/download", async (req, res) => {
       if (cl) res.setHeader("Content-Length", cl);
       
       await sendResponseToClient(res, fileRes);
-    } catch (err: any) {
+    } catch (err) {
       console.error("RapidAPI YouTube fallback error:", err.message);
       if (!res.headersSent) res.status(500).json({ error: "Download failed. Please try again or use a different quality." });
     }
@@ -664,7 +664,7 @@ app.post("/api/download", async (req, res) => {
         })
         .pipe(pass);
       pass.pipe(res);
-    } catch (err: any) {
+    } catch (err) {
       console.error("ytdl stream error:", err.message);
       if (!res.headersSent) res.status(500).json({ error: "Stream failed" });
     }
@@ -676,7 +676,7 @@ app.post("/api/download", async (req, res) => {
     let fileRes: Response;
     try {
       fileRes = await fetchSourceFile(url);
-    } catch (initialError: any) {
+    } catch (initialError) {
       if (!pageUrl) throw initialError;
       const refreshedUrl = await refreshRapidDownloadUrl(pageUrl, quality, format);
       if (!refreshedUrl) throw initialError;
@@ -690,7 +690,7 @@ app.post("/api/download", async (req, res) => {
     if (cl) res.setHeader("Content-Length", cl);
 
     await sendResponseToClient(res, fileRes);
-  } catch (err: any) {
+  } catch (err) {
     console.error("proxy download error:", err.message);
     if (!res.headersSent) res.status(500).json({ error: "Download failed" });
   }
