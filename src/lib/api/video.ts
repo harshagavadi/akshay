@@ -43,8 +43,10 @@ async function readApiError(response: Response, fallback: string) {
   }
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
-  const response = await fetch("/api/video-info", {
+  const response = await fetch(`${API_BASE}/api/video-info`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -78,7 +80,7 @@ export function startBrowserDownload(format: VideoFormat, title: string) {
 
   const form = document.createElement("form");
   form.method = "POST";
-  form.action = "/api/download";
+  form.action = `${API_BASE}/api/download`;
   form.target = frameName;
   form.style.display = "none";
 

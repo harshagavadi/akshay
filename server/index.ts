@@ -15,7 +15,14 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === "production" && !process.env.NETLIFY && !process.env.VERCEL && !process.env.REPL_ID;
 
-app.use(cors());
+const FRONTEND_URL = process.env.FRONTEND_URL || "";
+app.use(cors({
+  origin: FRONTEND_URL
+    ? [FRONTEND_URL, /\.vercel\.app$/, /\.replit\.dev$/]
+    : true,
+  methods: ["GET", "POST"],
+  credentials: false,
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 
