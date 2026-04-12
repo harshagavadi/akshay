@@ -471,8 +471,9 @@ app.post("/api/video-info", async (req, res) => {
     const clean = cacheKey;
     let usedYtdl = false;
     let youtubeErrorMessage = "Could not process this YouTube URL. Please try a different public video link.";
+    const isServerless = !!(process.env.NETLIFY || process.env.VERCEL);
 
-    try {
+    if (!isServerless) try {
       const info = await ytdl.getInfo(clean);
       const details = info.videoDetails;
 
@@ -532,7 +533,7 @@ app.post("/api/video-info", async (req, res) => {
       console.warn("ytdl-core failed, falling back to yt-dlp:", ytdlErr.message);
     }
 
-    try {
+    if (!isServerless) try {
       const data = await fetchYouTubeViaYtDlp(clean);
       return sendCachedVideoInfo(res, cacheKey, data);
     } catch (ytDlpErr: any) {
@@ -592,8 +593,9 @@ app.post("/api/download", async (req, res) => {
 
   const safe = (title || "video").replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "video";
 
+  const isServerlessDl = !!(process.env.NETLIFY || process.env.VERCEL);
   let ytDlpFailed = false;
-  if (pageUrl && isYouTube(pageUrl)) {
+  if (!isServerlessDl && pageUrl && isYouTube(pageUrl)) {
     try {
       await downloadWithYtDlp({ pageUrl, format, quality, title, res });
       return;
@@ -603,6 +605,7 @@ app.post("/api/download", async (req, res) => {
       ytDlpFailed = true;
     }
   }
+  if (isServerlessDl && pageUrl && isYouTube(pageUrl)) ytDlpFailed = true;
 
   // When yt-dlp is unavailable (e.g. Vercel), fall back to RapidAPI for YouTube
   if (ytDlpFailed && pageUrl && isYouTube(pageUrl)) {
