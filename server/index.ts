@@ -44,8 +44,26 @@ async function fetchWithAllVideoDownloader(url: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.text().catch(() => null);
-      throw new Error(errorData || `All-Video-Downloader API error (${response.status})`);
+      const bodyText = await response.text().catch(() => null);
+      let errorMessage = `All-Video-Downloader API error (${response.status})`;
+
+      if (bodyText) {
+        try {
+          const parsed = JSON.parse(bodyText);
+          if (parsed?.message) {
+            errorMessage = `${errorMessage}: ${parsed.message}`;
+            if (parsed?.data?.code) {
+              errorMessage += ` (${parsed.data.code})`;
+            }
+          } else {
+            errorMessage = `${errorMessage}: ${bodyText}`;
+          }
+        } catch {
+          errorMessage = `${errorMessage}: ${bodyText}`;
+        }
+      }
+
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
