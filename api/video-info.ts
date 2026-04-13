@@ -1,4 +1,4 @@
-import { fetchVideoInfo, mapDownloaderFormats, parseRequestBody } from "../server/video-service";
+import { fetchVideoInfo, mapDownloaderFormats, parseRequestBody } from "./video-service";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {

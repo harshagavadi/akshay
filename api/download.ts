@@ -1,4 +1,4 @@
-import { parseRequestBody, proxyDownload } from "../server/video-service";
+import { parseRequestBody, proxyDownload } from "./video-service";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
