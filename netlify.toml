@@ -1,19 +1,16 @@
+
 [build]
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["fluent-ffmpeg", "@distube/ytdl-core"]
+[dev]
+  framework = "vite"
+  port = 5173
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  methods = ["GET", "POST"]
