@@ -107,11 +107,34 @@ async function fetchVideoInfoDirect(normalizedUrl: string): Promise<VideoInfo> {
     body: new URLSearchParams({ url: normalizedUrl }).toString(),
   });
 
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  const text = await response.text();
   if (!response.ok) {
-    throw new Error(await readApiError(response, `Request failed (${response.status})`));
+    let errorMessage = `Request failed (${response.status})`;
+    if (contentType.includes("application/json")) {
+      try {
+        const parsed = JSON.parse(text);
+        errorMessage = parsed?.error || parsed?.message || errorMessage;
+      } catch {
+        errorMessage = text.slice(0, 200) || errorMessage;
+      }
+    } else {
+      errorMessage = text.slice(0, 200) || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
-  const result = await response.json();
+  let result: any;
+  if (contentType.includes("application/json")) {
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw new Error(`Unexpected API response; expected JSON but received HTML or text.`);
+    }
+  } else {
+    throw new Error(`Unexpected API response content type: ${contentType || "unknown"}`);
+  }
+
   const apiData = result?.success === true ? result.data : result;
 
   if (result?.success === false) {
