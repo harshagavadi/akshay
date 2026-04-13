@@ -15,39 +15,41 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 
-const VKR_API_KEY = process.env.VKR_API_KEY || "vkrdownloader";
-const VKR_API_ENDPOINT = "https://vkrdownloader.org/api/v1/get_video_info";
+const API_HUB_KEY = process.env.API_HUB_KEY || "9xkEKzmlRkVKTWQplEB86RfCsfj3ueLCwHoGH-Kpnw2Tm57mJI";
+const API_HUB_HOST = "All-Video-Downloader.allthingsdev.co";
+const API_HUB_ENDPOINT = "a67c4f7d-d1ec-4d63-a524-7cf81ce32fbe";
+const API_HOSTNAME = "All-Video-Downloader.proxy-production.allthingsdev.co";
+const API_PATH = "/all_media_downloader_v3/download";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-async function fetchWithVkr(url: string) {
+async function fetchWithAllVideoDownloader(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch(VKR_API_ENDPOINT, {
+    const response = await fetch(`https://${API_HOSTNAME}${API_PATH}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": VKR_API_KEY,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-apihub-key": API_HUB_KEY,
+        "x-apihub-host": API_HUB_HOST,
+        "x-apihub-endpoint": API_HUB_ENDPOINT,
       },
-      body: JSON.stringify({ url }),
+      body: new URLSearchParams({ url }).toString(),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || `VKrDownloader API error (${response.status})`);
+      const errorData = await response.text().catch(() => null);
+      throw new Error(errorData || `All-Video-Downloader API error (${response.status})`);
     }
 
     const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.message || "Failed to get video info from VKrDownloader");
-    }
-    return data.data;
+    return data;
   } catch (err: any) {
     if (err.name === "AbortError") {
       throw new Error("Request to video API timed out. Please try again.");
@@ -58,28 +60,31 @@ async function fetchWithVkr(url: string) {
   }
 }
 
-function mapVkrFormats(data: any, pageUrl: string) {
+function mapDownloaderFormats(data: any, pageUrl: string) {
   const formats: any[] = [];
-  if (Array.isArray(data.links)) {
-    for (const link of data.links) {
-      formats.push({
-        quality: link.quality || "Unknown",
-        format: (link.type || "mp4").toLowerCase(),
-        size: link.size ? formatBytes(link.size) : null,
-        url: link.url,
-        hasAudio: !link.mute,
-        videoOnly: !!link.mute,
-        pageUrl,
-      });
-    }
+  
+  if (data.downloads && typeof data.downloads === "object") {
+    Object.entries(data.downloads).forEach(([quality, url]: [string, any]) => {
+      if (typeof url === "string") {
+        formats.push({
+          quality: quality || "Unknown",
+          format: "mp4",
+          size: null,
+          url: url,
+          hasAudio: true,
+          videoOnly: false,
+          pageUrl,
+        });
+      }
+    });
   }
 
-  if (data.audio_links && data.audio_links.mp3) {
+  if (data.audio && typeof data.audio === "string") {
     formats.push({
       quality: "MP3 Audio",
       format: "mp3",
       size: null,
-      url: data.audio_links.mp3,
+      url: data.audio,
       hasAudio: true,
       videoOnly: false,
       pageUrl,
@@ -96,19 +101,19 @@ app.post("/api/video-info", async (req, res) => {
   }
 
   try {
-    const vkrData = await fetchWithVkr(url);
-    const formats = mapVkrFormats(vkrData, url);
+    const apiData = await fetchWithAllVideoDownloader(url);
+    const formats = mapDownloaderFormats(apiData, url);
 
     if (formats.length === 0) {
       throw new Error("No downloadable formats were found for this URL.");
     }
 
     const responseData = {
-      title: vkrData.title || "Video",
-      thumbnail: vkrData.thumbnail || "",
-      duration: vkrData.duration || "Unknown",
+      title: apiData.title || "Video",
+      thumbnail: apiData.thumbnail || "",
+      duration: apiData.duration || "Unknown",
       formats,
-      source: "vkrdownloader",
+      source: "all-video-downloader",
     };
 
     res.json({ success: true, data: responseData });
