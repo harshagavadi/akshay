@@ -1,7 +1,4 @@
 {
-  "functions": {
-    "api/**/*.ts": {}
-  },
   "rewrites": [
     {
       "source": "/((?!api/|.*\\..*).*)",
