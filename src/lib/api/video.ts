@@ -89,9 +89,57 @@ async function readApiError(response: Response, fallback: string) {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const USE_DIRECT_API = import.meta.env.VITE_USE_DIRECT_VIDEO_API === "true";
+const DIRECT_VIDEO_API_URL = import.meta.env.VITE_DIRECT_VIDEO_API_URL || "https://All-Video-Downloader.proxy-production.allthingsdev.co/all_media_downloader_v3/download";
+const DIRECT_VIDEO_API_KEY = import.meta.env.VITE_DIRECT_VIDEO_API_KEY || "9xkEKzmlRkVKTWQplEB86RfCsfj3ueLCwHoGH-Kpnw2Tm57mJI";
+const DIRECT_VIDEO_API_HOST = import.meta.env.VITE_DIRECT_VIDEO_API_HOST || "All-Video-Downloader.allthingsdev.co";
+const DIRECT_VIDEO_API_ENDPOINT = import.meta.env.VITE_DIRECT_VIDEO_API_ENDPOINT || "a67c4f7d-d1ec-4d63-a524-7cf81ce32fbe";
+
+async function fetchVideoInfoDirect(normalizedUrl: string): Promise<VideoInfo> {
+  const response = await fetch(DIRECT_VIDEO_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "x-apihub-key": DIRECT_VIDEO_API_KEY,
+      "x-apihub-host": DIRECT_VIDEO_API_HOST,
+      "x-apihub-endpoint": DIRECT_VIDEO_API_ENDPOINT,
+    },
+    body: new URLSearchParams({ url: normalizedUrl }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, `Request failed (${response.status})`));
+  }
+
+  const result = await response.json();
+  const apiData = result?.success === true ? result.data : result;
+
+  if (result?.success === false) {
+    throw new Error(result?.error || result?.message || "Could not process this URL");
+  }
+
+  const formats = mapDownloaderFormats(apiData, normalizedUrl);
+  if (formats.length === 0) {
+    throw new Error("No downloadable formats were found for this URL.");
+  }
+
+  const info: VideoInfo = {
+    title: apiData.title || "Video",
+    thumbnail: apiData.thumbnail || "",
+    duration: apiData.duration || "Unknown",
+    formats: formats.map((f) => ({ ...f, source: apiData.source || "all-video-downloader" })),
+    source: apiData.source || "all-video-downloader",
+  };
+
+  return info;
+}
 
 export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
   const normalizedUrl = normalizeVideoUrl(url);
+  if (USE_DIRECT_API) {
+    return fetchVideoInfoDirect(normalizedUrl);
+  }
+
   const response = await fetch(`${API_BASE}/api/video-info`, {
     method: "POST",
     headers: {
