@@ -31,6 +31,51 @@ export function parseVideoUrls(input: string) {
   );
 }
 
+export function normalizeVideoUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+
+    if (url.hostname === "youtu.be") {
+      const videoId = url.pathname.slice(1);
+      if (videoId) {
+        return `https://www.youtube.com/watch?v=${videoId}`;
+      }
+    }
+
+    if (url.hostname.endsWith("youtube.com")) {
+      if (url.pathname.startsWith("/shorts/")) {
+        const videoId = url.pathname.split("/")[2];
+        if (videoId) {
+          return `https://www.youtube.com/watch?v=${videoId}`;
+        }
+      }
+
+      if (url.pathname === "/watch" && url.searchParams.has("v")) {
+        return `https://www.youtube.com/watch?v=${url.searchParams.get("v")}`;
+      }
+    }
+
+    const removeParams = [
+      "si",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "feature",
+      "fbclid",
+    ];
+    removeParams.forEach((name) => url.searchParams.delete(name));
+
+    return url.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 async function readApiError(response: Response, fallback: string) {
   const text = await response.text();
   if (!text) return fallback;
@@ -46,12 +91,13 @@ async function readApiError(response: Response, fallback: string) {
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
+  const normalizedUrl = normalizeVideoUrl(url);
   const response = await fetch(`${API_BASE}/api/video-info`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url: normalizedUrl }),
   });
 
   if (!response.ok) {
