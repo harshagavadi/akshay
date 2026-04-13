@@ -1,12 +1,10 @@
 {
   "functions": {
-    "api/**/*.ts": {
-      "memory": 1024
-    }
+    "api/**/*.ts": {}
   },
   "rewrites": [
     {
-      "source": "/((?!api/|.*\\..*).*)"
+      "source": "/((?!api/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
