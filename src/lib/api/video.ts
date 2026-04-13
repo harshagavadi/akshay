@@ -89,7 +89,7 @@ async function readApiError(response: Response, fallback: string) {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const USE_DIRECT_API = import.meta.env.VITE_USE_DIRECT_VIDEO_API === "true";
+const USE_DIRECT_API = import.meta.env.VITE_USE_DIRECT_VIDEO_API !== "false";
 const DIRECT_VIDEO_API_URL = import.meta.env.VITE_DIRECT_VIDEO_API_URL || "https://All-Video-Downloader.proxy-production.allthingsdev.co/all_media_downloader_v3/download";
 const DIRECT_VIDEO_API_KEY = import.meta.env.VITE_DIRECT_VIDEO_API_KEY || "9xkEKzmlRkVKTWQplEB86RfCsfj3ueLCwHoGH-Kpnw2Tm57mJI";
 const DIRECT_VIDEO_API_HOST = import.meta.env.VITE_DIRECT_VIDEO_API_HOST || "All-Video-Downloader.allthingsdev.co";
@@ -123,15 +123,13 @@ async function fetchVideoInfoDirect(normalizedUrl: string): Promise<VideoInfo> {
     throw new Error("No downloadable formats were found for this URL.");
   }
 
-  const info: VideoInfo = {
+  return {
     title: apiData.title || "Video",
     thumbnail: apiData.thumbnail || "",
     duration: apiData.duration || "Unknown",
     formats: formats.map((f) => ({ ...f, source: apiData.source || "all-video-downloader" })),
     source: apiData.source || "all-video-downloader",
   };
-
-  return info;
 }
 
 export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
@@ -166,43 +164,13 @@ export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
 }
 
 export function startBrowserDownload(format: VideoFormat, title: string) {
-  const frameName = `download-frame-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const iframe = document.createElement("iframe");
-  iframe.name = frameName;
-  iframe.style.display = "none";
-  document.body.appendChild(iframe);
-
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = `${API_BASE}/api/download`;
-  form.target = frameName;
-  form.style.display = "none";
-
-  const fields: Record<string, string> = {
-    url: format.url,
-    format: format.format,
-    title,
-    quality: format.quality,
-  };
-
-  if (format.itag !== null && format.itag !== undefined) fields.itag = String(format.itag);
-  if (format.audioItag !== null && format.audioItag !== undefined) fields.audioItag = String(format.audioItag);
-  if (format.source) fields.source = format.source;
-  if (format.pageUrl) fields.pageUrl = format.pageUrl;
-
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
-
-  window.setTimeout(() => {
-    iframe.remove();
-  }, 30000);
+  const safeTitle = (title || "video").replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "video";
+  const link = document.createElement("a");
+  link.href = format.url;
+  link.target = "_blank";
+  link.rel = "noreferrer noopener";
+  link.download = `${safeTitle}.${format.format || "mp4"}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
