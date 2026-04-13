@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Search, Download, Zap, Shield, Globe, Play,
   Sparkles, Star, Clock, CheckCircle2, ArrowRight,
-  Film, Music2, MonitorPlay, Smartphone
+  Film, Music2, MonitorPlay, Smartphone, RotateCcw
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
@@ -146,15 +146,40 @@ const Index = () => {
           queued.id === item.id ? { ...queued, status: "ready", video: info } : queued
         )));
       } catch (err: any) {
+        const errorMessage = err.message?.includes("ECONNRESET") || err.message?.includes("processing the request")
+          ? "Video service is temporarily unavailable. Please try again later."
+          : err.message || "Failed to process video URL.";
         setQueueItems((current) => current.map((queued) => (
           queued.id === item.id
-            ? { ...queued, status: "failed", error: err.message || "Failed to process video URL." }
+            ? { ...queued, status: "failed", error: errorMessage }
             : queued
         )));
       }
     }
 
     setIsLoading(false);
+  };
+
+  const retryItem = async (item: QueueItem) => {
+    setQueueItems((current) => current.map((queued) => (
+      queued.id === item.id ? { ...queued, status: "processing", error: undefined } : queued
+    )));
+
+    try {
+      const info = await fetchVideoInfo(item.url);
+      setQueueItems((current) => current.map((queued) => (
+        queued.id === item.id ? { ...queued, status: "ready", video: info } : queued
+      )));
+    } catch (err: any) {
+      const errorMessage = err.message?.includes("ECONNRESET") || err.message?.includes("processing the request")
+        ? "Video service is temporarily unavailable. Please try again later."
+        : err.message || "Failed to process video URL.";
+      setQueueItems((current) => current.map((queued) => (
+        queued.id === item.id
+          ? { ...queued, status: "failed", error: errorMessage }
+          : queued
+      )));
+    }
   };
 
   return (
@@ -275,17 +300,31 @@ const Index = () => {
                         <p className="min-w-0 truncate text-sm font-medium text-foreground">
                           {index + 1}. {item.url}
                         </p>
-                        <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          item.status === "ready"
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : item.status === "failed"
-                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-                            : item.status === "processing"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                            : "bg-secondary text-muted-foreground"
-                        }`}>
-                          {item.status === "processing" ? "Processing" : item.status === "ready" ? "Ready" : item.status === "failed" ? "Failed" : "Queued"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            item.status === "ready"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                              : item.status === "failed"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                              : item.status === "processing"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                              : "bg-secondary text-muted-foreground"
+                          }`}>
+                            {item.status === "processing" ? "Processing" : item.status === "ready" ? "Ready" : item.status === "failed" ? "Failed" : "Queued"}
+                          </span>
+                          {item.status === "failed" && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => retryItem(item)}
+                              className="h-6 w-6 p-0"
+                              title="Retry"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {item.error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-300">{item.error}</p>}
                     </div>

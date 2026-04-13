@@ -89,7 +89,7 @@ async function readApiError(response: Response, fallback: string) {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const USE_DIRECT_API = import.meta.env.VITE_USE_DIRECT_VIDEO_API !== "false";
+const USE_DIRECT_API = import.meta.env.VITE_USE_DIRECT_VIDEO_API === "true";
 const DIRECT_VIDEO_API_URL = import.meta.env.VITE_DIRECT_VIDEO_API_URL || "https://All-Video-Downloader.proxy-production.allthingsdev.co/all_media_downloader_v3/download";
 const DIRECT_VIDEO_API_KEY = import.meta.env.VITE_DIRECT_VIDEO_API_KEY || "9xkEKzmlRkVKTWQplEB86RfCsfj3ueLCwHoGH-Kpnw2Tm57mJI";
 const DIRECT_VIDEO_API_HOST = import.meta.env.VITE_DIRECT_VIDEO_API_HOST || "All-Video-Downloader.allthingsdev.co";

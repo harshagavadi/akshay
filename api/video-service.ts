@@ -125,6 +125,78 @@ export async function fetchWithVideoDownloader(url: string) {
   }
 }
 
+export async function fetchWithRapidAPI(url: string) {
+  // Extract videoId from URL
+  const normalizedUrl = url.replace(/https?:\/\//, '').replace('youtu.be/', 'youtube.com/watch?v=');
+  const videoIdMatch = normalizedUrl.match(/[?&]v=([^&]+)/);
+  if (!videoIdMatch) {
+    throw new Error('Invalid YouTube URL');
+  }
+  const videoId = videoIdMatch[1];
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    // First get details
+    const detailsResponse = await fetch(`https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details?videoId=${videoId}&urlAccess=normal&renderableFormats=720p%2Chighres&getTranscript=false`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": "7116477c1cmsh7187980119cbe4fp1300d3jsn306d9242c7a8",
+        "x-rapidapi-host": "social-media-video-downloader.p.rapidapi.com",
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    if (!detailsResponse.ok) {
+      throw new Error(`RapidAPI details error (${detailsResponse.status})`);
+    }
+
+    const details = await detailsResponse.json();
+    if (!details || !details.title) {
+      throw new Error('RapidAPI details error: Invalid response');
+    }
+
+    // Then get download URL
+    const downloadResponse = await fetch(`https://social-media-video-downloader.p.rapidapi.com/youtube/v3/download?videoId=${videoId}&format=mp4&quality=720p`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": "7116477c1cmsh7187980119cbe4fp1300d3jsn306d9242c7a8",
+        "x-rapidapi-host": "social-media-video-downloader.p.rapidapi.com",
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    if (!downloadResponse.ok) {
+      throw new Error(`RapidAPI download error (${downloadResponse.status})`);
+    }
+
+    const downloadData = await downloadResponse.json();
+    if (!downloadData || !downloadData.downloadUrl) {
+      throw new Error('RapidAPI download error: No download URL');
+    }
+
+    // Transform to expected format
+    return {
+      title: details.title || "Video",
+      thumbnail: details.thumbnail || "",
+      duration: details.duration || "Unknown",
+      downloads: {
+        "720p": downloadData.downloadUrl,
+      },
+    };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error("Request to video API timed out. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchVideoInfo(url: string) {
   try {
     return await fetchWithAllVideoDownloader(url);
@@ -134,7 +206,13 @@ export async function fetchVideoInfo(url: string) {
     try {
       return await fetchWithVideoDownloader(url);
     } catch (fallbackError: any) {
-      throw new Error(`Primary provider failed: ${primaryError?.message}; fallback provider failed: ${fallbackError?.message}`);
+      console.warn("Secondary Video-Downloader provider failed:", fallbackError?.message);
+
+      try {
+        return await fetchWithRapidAPI(url);
+      } catch (tertiaryError: any) {
+        throw new Error(`All providers failed: Primary (${primaryError?.message}), Secondary (${fallbackError?.message}), Tertiary (${tertiaryError?.message})`);
+      }
     }
   }
 }
@@ -142,6 +220,58 @@ export async function fetchVideoInfo(url: string) {
 export function mapDownloaderFormats(data: any, pageUrl: string) {
   const formats: any[] = [];
 
+  // Handle Y2Mate format (formats.mp4 and formats.mp3)
+  if (data.formats && typeof data.formats === "object") {
+    if (data.formats.mp4 && typeof data.formats.mp4 === "object") {
+      Object.entries(data.formats.mp4).forEach(([quality, info]: [string, any]) => {
+        if (info && info.url) {
+          formats.push({
+            quality: quality,
+            format: "mp4",
+            size: info.size || null,
+            url: info.url,
+            hasAudio: true,
+            videoOnly: false,
+            pageUrl,
+          });
+        }
+      });
+    }
+    if (data.formats.mp3 && typeof data.formats.mp3 === "object") {
+      Object.entries(data.formats.mp3).forEach(([quality, info]: [string, any]) => {
+        if (info && info.url) {
+          formats.push({
+            quality: quality,
+            format: "mp3",
+            size: info.size || null,
+            url: info.url,
+            hasAudio: true,
+            videoOnly: false,
+            pageUrl,
+          });
+        }
+      });
+    }
+  }
+
+  // Handle SaveMP3 format (array of formats)
+  if (data.formats && Array.isArray(data.formats)) {
+    data.formats.forEach((fmt: any) => {
+      if (fmt.url) {
+        formats.push({
+          quality: fmt.quality || "Unknown",
+          format: fmt.format || "mp4",
+          size: fmt.size || null,
+          url: fmt.url,
+          hasAudio: !fmt.videoOnly,
+          videoOnly: fmt.videoOnly || false,
+          pageUrl,
+        });
+      }
+    });
+  }
+
+  // Handle downloads object (existing APIs)
   if (data.downloads && typeof data.downloads === "object") {
     Object.entries(data.downloads).forEach(([quality, url]: [string, any]) => {
       if (typeof url === "string") {
