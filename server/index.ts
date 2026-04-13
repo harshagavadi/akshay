@@ -16,10 +16,16 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 
 const API_HUB_KEY = process.env.API_HUB_KEY || "9xkEKzmlRkVKTWQplEB86RfCsfj3ueLCwHoGH-Kpnw2Tm57mJI";
-const API_HUB_HOST = "All-Video-Downloader.allthingsdev.co";
-const API_HUB_ENDPOINT = "a67c4f7d-d1ec-4d63-a524-7cf81ce32fbe";
-const API_HOSTNAME = "All-Video-Downloader.proxy-production.allthingsdev.co";
-const API_PATH = "/all_media_downloader_v3/download";
+const API_HUB_HOST = process.env.API_HUB_HOST || "All-Video-Downloader.allthingsdev.co";
+const API_HUB_ENDPOINT = process.env.API_HUB_ENDPOINT || "a67c4f7d-d1ec-4d63-a524-7cf81ce32fbe";
+const API_HOSTNAME = process.env.API_HOSTNAME || "All-Video-Downloader.proxy-production.allthingsdev.co";
+const API_PATH = process.env.API_PATH || "/all_media_downloader_v3/download";
+
+const VIDEO_DOWNLOADER_KEY = process.env.VIDEO_DOWNLOADER_KEY || API_HUB_KEY;
+const VIDEO_DOWNLOADER_HOST = process.env.VIDEO_DOWNLOADER_HOST || "Video-Downloader.allthingsdev.co";
+const VIDEO_DOWNLOADER_ENDPOINT = process.env.VIDEO_DOWNLOADER_ENDPOINT || "61cd9229-ed75-4f09-84ed-5da30e4881be";
+const VIDEO_DOWNLOADER_HOSTNAME = process.env.VIDEO_DOWNLOADER_HOSTNAME || "Video-Downloader.proxy-production.allthingsdev.co";
+const VIDEO_DOWNLOADER_PATH = process.env.VIDEO_DOWNLOADER_PATH || "/youtube-video-downloader";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -78,6 +84,56 @@ async function fetchWithAllVideoDownloader(url: string) {
   }
 }
 
+async function fetchWithVideoDownloader(url: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const encodedUrl = encodeURIComponent(url);
+    const response = await fetch(`https://${VIDEO_DOWNLOADER_HOSTNAME}${VIDEO_DOWNLOADER_PATH}?url=${encodedUrl}`, {
+      method: "GET",
+      headers: {
+        "x-apihub-key": VIDEO_DOWNLOADER_KEY,
+        "x-apihub-host": VIDEO_DOWNLOADER_HOST,
+        "x-apihub-endpoint": VIDEO_DOWNLOADER_ENDPOINT,
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text().catch(() => null);
+      let errorMessage = `Video-Downloader API error (${response.status})`;
+      if (bodyText) {
+        errorMessage = `${errorMessage}: ${bodyText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error("Request to video API timed out. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchVideoInfo(url: string) {
+  try {
+    return await fetchWithAllVideoDownloader(url);
+  } catch (primaryError: any) {
+    console.warn("Primary All-Video-Downloader provider failed:", primaryError.message);
+
+    try {
+      return await fetchWithVideoDownloader(url);
+    } catch (fallbackError: any) {
+      throw new Error(`Primary provider failed: ${primaryError.message}; fallback provider failed: ${fallbackError.message}`);
+    }
+  }
+}
+
 function mapDownloaderFormats(data: any, pageUrl: string) {
   const formats: any[] = [];
   
@@ -119,7 +175,7 @@ app.post("/api/video-info", async (req, res) => {
   }
 
   try {
-    const apiData = await fetchWithAllVideoDownloader(url);
+    const apiData = await fetchVideoInfo(url);
     const formats = mapDownloaderFormats(apiData, url);
 
     if (formats.length === 0) {
